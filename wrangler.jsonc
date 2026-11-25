@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "comcom",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-11-16",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "comcom"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "BOOKINGS",
+      "id": "a5926ca1868e45ad991a039c7b794b5f"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
