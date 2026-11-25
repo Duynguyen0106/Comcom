@@ -7,7 +7,8 @@ Built as a Next.js App Router site in the style of [photarestaurants.com](https:
 ## Stack
 
 - Next.js + TypeScript + Tailwind CSS
-- Multi-step reservations API (`POST /api/bookings`) storing bookings in `.data/bookings.json`
+- Deployed to **Cloudflare Workers** via `@opennextjs/cloudflare`
+- Multi-step reservations API (`POST /api/bookings`) stored in Cloudflare KV (`BOOKINGS`)
 
 ## Develop
 
@@ -20,10 +21,18 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scripts
 
-- `npm run dev` — local development
-- `npm run build` — production build
-- `npm run start` — serve production build
+- `npm run dev` — local Next.js development
+- `npm run build` — Next.js production build
+- `npm run preview` — OpenNext build + local Workers preview
+- `npm run deploy` — OpenNext build + deploy to Cloudflare Workers
 - `npm run lint` — ESLint
+
+## Deploy
+
+```bash
+export CLOUDFLARE_API_TOKEN=...
+npm run deploy
+```
 
 ## Contact (restaurant)
 

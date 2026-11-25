@@ -1,6 +1,5 @@
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { randomBytes } from "crypto";
-import { promises as fs } from "fs";
-import path from "path";
 
 export type BookingInput = {
   date: string;
@@ -20,21 +19,47 @@ export type Booking = BookingInput & {
   venue: string;
 };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
-const DATA_FILE = path.join(DATA_DIR, "bookings.json");
+const INDEX_KEY = "bookings:index";
 
-async function readAll(): Promise<Booking[]> {
+type BookingsBinding = {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+};
+
+/** In-memory fallback for local `next dev` without Wrangler bindings. */
+const memoryStore = new Map<string, string>();
+
+async function getKv(): Promise<BookingsBinding> {
   try {
-    const raw = await fs.readFile(DATA_FILE, "utf8");
+    const { env } = await getCloudflareContext({ async: true });
+    const kv = (env as { BOOKINGS?: BookingsBinding }).BOOKINGS;
+    if (kv) return kv;
+  } catch {
+    // Not running inside Cloudflare / OpenNext yet.
+  }
+
+  return {
+    async get(key) {
+      return memoryStore.get(key) ?? null;
+    },
+    async put(key, value) {
+      memoryStore.set(key, value);
+    },
+  };
+}
+
+async function readAll(kv: BookingsBinding): Promise<Booking[]> {
+  try {
+    const raw = await kv.get(INDEX_KEY);
+    if (!raw) return [];
     return JSON.parse(raw) as Booking[];
   } catch {
     return [];
   }
 }
 
-async function writeAll(bookings: Booking[]) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(DATA_FILE, JSON.stringify(bookings, null, 2), "utf8");
+async function writeAll(kv: BookingsBinding, bookings: Booking[]) {
+  await kv.put(INDEX_KEY, JSON.stringify(bookings));
 }
 
 function makeReference() {
@@ -42,7 +67,8 @@ function makeReference() {
 }
 
 export async function createBooking(input: BookingInput): Promise<Booking> {
-  const bookings = await readAll();
+  const kv = await getKv();
+  const bookings = await readAll(kv);
   const booking: Booking = {
     ...input,
     id: randomBytes(8).toString("hex"),
@@ -51,6 +77,7 @@ export async function createBooking(input: BookingInput): Promise<Booking> {
     venue: "Com Com Battersea",
   };
   bookings.push(booking);
-  await writeAll(bookings);
+  await writeAll(kv, bookings);
+  await kv.put(`booking:${booking.reference}`, JSON.stringify(booking));
   return booking;
 }
